@@ -1,0 +1,449 @@
+<%- contentFor('title') %>Dashboard
+
+<%- contentFor('body') %>
+<div class="dashboard">
+    <!-- Stats Overview -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-bolt"></i>
+            </div>
+            <div class="stat-content">
+                <h3><%= stats.apiCalls.toLocaleString() %></h3>
+                <p>API Calls</p>
+                <div class="stat-trend <%= stats.apiCallsTrend > 0 ? 'positive' : 'negative' %>">
+                    <i class="fas fa-<%= stats.apiCallsTrend > 0 ? 'arrow-up' : 'arrow-down' %>"></i>
+                    <span><%= Math.abs(stats.apiCallsTrend) %>%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="stat-content">
+                <h3><%= stats.avgResponseTime %>ms</h3>
+                <p>Avg Response Time</p>
+                <div class="stat-trend <%= stats.responseTimeTrend < 0 ? 'positive' : 'negative' %>">
+                    <i class="fas fa-<%= stats.responseTimeTrend < 0 ? 'arrow-down' : 'arrow-up' %>"></i>
+                    <span><%= Math.abs(stats.responseTimeTrend) %>%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-content">
+                <h3><%= stats.successRate %>%</h3>
+                <p>Success Rate</p>
+                <div class="stat-trend <%= stats.successRateTrend > 0 ? 'positive' : 'negative' %>">
+                    <i class="fas fa-<%= stats.successRateTrend > 0 ? 'arrow-up' : 'arrow-down' %>"></i>
+                    <span><%= Math.abs(stats.successRateTrend) %>%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-database"></i>
+            </div>
+            <div class="stat-content">
+                <h3><%= stats.dataProcessed %></h3>
+                <p>Data Processed</p>
+                <div class="stat-trend <%= stats.dataProcessedTrend > 0 ? 'positive' : 'negative' %>">
+                    <i class="fas fa-<%= stats.dataProcessedTrend > 0 ? 'arrow-up' : 'arrow-down' %>"></i>
+                    <span><%= Math.abs(stats.dataProcessedTrend) %>%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Usage Chart -->
+    <div class="chart-card">
+        <div class="chart-header">
+            <h3>API Usage</h3>
+            <div class="chart-actions">
+                <button class="button secondary active" data-range="7d">7D</button>
+                <button class="button secondary" data-range="1m">1M</button>
+                <button class="button secondary" data-range="3m">3M</button>
+                <button class="button secondary" data-range="1y">1Y</button>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="usageChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Recent Activity & Endpoints -->
+    <div class="dashboard-grid">
+        <!-- Recent Activity -->
+        <div class="activity-card">
+            <h3>Recent Activity</h3>
+            <div class="activity-list">
+                <% activities.forEach(activity => { %>
+                    <div class="activity-item">
+                        <div class="activity-icon <%= activity.status %>">
+                            <i class="fas fa-<%= 
+                                activity.type === 'api' ? 'bolt' :
+                                activity.type === 'auth' ? 'key' :
+                                activity.type === 'data' ? 'database' :
+                                'circle'
+                            %>"></i>
+                        </div>
+                        <div class="activity-content">
+                            <p><%= activity.description %></p>
+                            <span class="activity-time"><%= activity.timeAgo %></span>
+                        </div>
+                        <div class="activity-status">
+                            <span class="status-badge <%= activity.status %>">
+                                <%= activity.status %>
+                            </span>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+            <a href="/activity" class="button secondary full-width">View All Activity</a>
+        </div>
+
+        <!-- Popular Endpoints -->
+        <div class="endpoints-card">
+            <h3>Popular Endpoints</h3>
+            <div class="endpoints-list">
+                <% endpoints.forEach(endpoint => { %>
+                    <div class="endpoint-item">
+                        <div class="endpoint-method <%= endpoint.method.toLowerCase() %>">
+                            <%= endpoint.method %>
+                        </div>
+                        <div class="endpoint-content">
+                            <p><%= endpoint.path %></p>
+                            <div class="endpoint-stats">
+                                <span><i class="fas fa-bolt"></i> <%= endpoint.calls %> calls</span>
+                                <span><i class="fas fa-clock"></i> <%= endpoint.avgTime %>ms</span>
+                                <span><i class="fas fa-check-circle"></i> <%= endpoint.successRate %>%</span>
+                            </div>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+.stat-card {
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius-large);
+    box-shadow: var(--shadow-medium);
+    padding: var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+    transition: transform var(--transition-normal);
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+}
+
+.stat-icon {
+    background-color: var(--bg-tertiary);
+    border-radius: var(--radius-medium);
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-small);
+}
+
+.stat-icon i {
+    font-size: 20px;
+    color: var(--accent-primary);
+}
+
+.stat-content h3 {
+    font-size: var(--font-size-xl);
+    margin-bottom: var(--spacing-xs);
+}
+
+.stat-content p {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.stat-trend {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: 4px 8px;
+    border-radius: var(--radius-small);
+    font-size: var(--font-size-sm);
+}
+
+.stat-trend.positive {
+    background-color: rgba(76, 175, 80, 0.1);
+    color: var(--success);
+}
+
+.stat-trend.negative {
+    background-color: rgba(244, 67, 54, 0.1);
+    color: var(--error);
+}
+
+/* Chart Card */
+.chart-card {
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius-large);
+    box-shadow: var(--shadow-medium);
+    padding: var(--spacing-lg);
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+}
+
+.chart-actions {
+    display: flex;
+    gap: var(--spacing-xs);
+}
+
+.chart-actions .button {
+    padding: var(--spacing-xs) var(--spacing-sm);
+}
+
+.chart-actions .button.active {
+    background-color: var(--accent-primary);
+}
+
+.chart-container {
+    height: 300px;
+    position: relative;
+}
+
+/* Dashboard Grid */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+/* Activity Card */
+.activity-card {
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius-large);
+    box-shadow: var(--shadow-medium);
+    padding: var(--spacing-lg);
+}
+
+.activity-list {
+    margin: var(--spacing-lg) 0;
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    border-radius: var(--radius-medium);
+    transition: background-color var(--transition-fast);
+}
+
+.activity-item:hover {
+    background-color: var(--bg-tertiary);
+}
+
+.activity-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-medium);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.activity-icon.success { background-color: rgba(76, 175, 80, 0.1); color: var(--success); }
+.activity-icon.error { background-color: rgba(244, 67, 54, 0.1); color: var(--error); }
+.activity-icon.warning { background-color: rgba(255, 152, 0, 0.1); color: var(--warning); }
+
+.activity-content {
+    flex: 1;
+}
+
+.activity-time {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: var(--radius-small);
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+}
+
+.status-badge.success { background-color: rgba(76, 175, 80, 0.1); color: var(--success); }
+.status-badge.error { background-color: rgba(244, 67, 54, 0.1); color: var(--error); }
+.status-badge.warning { background-color: rgba(255, 152, 0, 0.1); color: var(--warning); }
+
+/* Endpoints Card */
+.endpoints-card {
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius-large);
+    box-shadow: var(--shadow-medium);
+    padding: var(--spacing-lg);
+}
+
+.endpoints-list {
+    margin-top: var(--spacing-lg);
+}
+
+.endpoint-item {
+    display: flex;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    border-radius: var(--radius-medium);
+    transition: background-color var(--transition-fast);
+}
+
+.endpoint-item:hover {
+    background-color: var(--bg-tertiary);
+}
+
+.endpoint-method {
+    padding: 4px 8px;
+    border-radius: var(--radius-small);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.endpoint-method.get { background-color: rgba(33, 150, 243, 0.1); color: #2196f3; }
+.endpoint-method.post { background-color: rgba(76, 175, 80, 0.1); color: var(--success); }
+.endpoint-method.put { background-color: rgba(255, 152, 0, 0.1); color: var(--warning); }
+.endpoint-method.delete { background-color: rgba(244, 67, 54, 0.1); color: var(--error); }
+
+.endpoint-content {
+    flex: 1;
+}
+
+.endpoint-stats {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-xs);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.endpoint-stats span {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.full-width {
+    width: 100%;
+    margin-top: var(--spacing-md);
+}
+
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+// Initialize Chart.js
+document.addEventListener('DOMContentLoaded', () => {
+    const ctx = document.getElementById('usageChart').getContext('2d');
+    
+    // Chart configuration
+    const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: <%- JSON.stringify(chartData.labels) %>,
+            datasets: [{
+                label: 'API Calls',
+                data: <%- JSON.stringify(chartData.data) %>,
+                borderColor: '#4f6df5',
+                backgroundColor: 'rgba(79, 109, 245, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)'
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)'
+                    }
+                }
+            }
+        }
+    });
+
+    // Handle time range buttons
+    document.querySelectorAll('[data-range]').forEach(button => {
+        button.addEventListener('click', async () => {
+            // Remove active class from all buttons
+            document.querySelectorAll('[data-range]').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Add active class to clicked button
+            button.classList.add('active');
+            
+            // Fetch new data
+            const range = button.dataset.range;
+            try {
+                const response = await axios.get(`/api/stats/usage?range=${range}`);
+                
+                // Update chart data
+                chart.data.labels = response.data.labels;
+                chart.data.datasets[0].data = response.data.data;
+                chart.update();
+            } catch (error) {
+                showToast('Failed to fetch usage data', 'error');
+            }
+        });
+    });
+});
+</script> 

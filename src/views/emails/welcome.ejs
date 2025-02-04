@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to <%= process.env.APP_NAME %></title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            max-width: 150px;
+            margin-bottom: 20px;
+        }
+        .button {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .feature-box {
+            background-color: #e8f5e9;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .feature-title {
+            color: #2e7d32;
+            margin-bottom: 10px;
+        }
+        .getting-started {
+            background-color: #e3f2fd;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .footer {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+        .social-links {
+            margin: 20px 0;
+        }
+        .social-links a {
+            margin: 0 10px;
+            color: #1976d2;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="<%= process.env.FRONTEND_URL %>/images/logo.png" alt="Logo" class="logo">
+            <h1>Welcome to <%= process.env.APP_NAME %>!</h1>
+        </div>
+        
+        <p>Hello <%= name %>,</p>
+        
+        <p>Thank you for joining our platform! We're excited to have you on board and can't wait to help you get started.</p>
+        
+        <div class="getting-started">
+            <h2>Getting Started</h2>
+            <p>Here are a few things you can do to get started:</p>
+            <ol>
+                <li>Complete your profile</li>
+                <li>Generate your first API key</li>
+                <li>Check out our documentation</li>
+                <li>Try our interactive API console</li>
+            </ol>
+        </div>
+        
+        <div style="text-align: center;">
+            <a href="<%= process.env.FRONTEND_URL %>/dashboard" class="button">Go to Dashboard</a>
+        </div>
+        
+        <div class="feature-box">
+            <h3 class="feature-title">Key Features</h3>
+            <ul>
+                <li>Powerful API endpoints</li>
+                <li>Real-time data access</li>
+                <li>Comprehensive documentation</li>
+                <li>24/7 support</li>
+            </ul>
+        </div>
+        
+        <p>Need help getting started? Check out our resources:</p>
+        <ul>
+            <li><a href="<%= process.env.FRONTEND_URL %>/docs">Documentation</a></li>
+            <li><a href="<%= process.env.FRONTEND_URL %>/tutorials">Tutorials</a></li>
+            <li><a href="<%= process.env.FRONTEND_URL %>/api-reference">API Reference</a></li>
+            <li><a href="<%= process.env.FRONTEND_URL %>/support">Support Center</a></li>
+        </ul>
+        
+        <div class="social-links">
+            <p>Connect with us:</p>
+            <a href="<%= process.env.TWITTER_URL %>">Twitter</a>
+            <a href="<%= process.env.GITHUB_URL %>">GitHub</a>
+            <a href="<%= process.env.LINKEDIN_URL %>">LinkedIn</a>
+            <a href="<%= process.env.DISCORD_URL %>">Discord</a>
+        </div>
+        
+        <div class="footer">
+            <p>This email was sent by <%= process.env.APP_NAME %></p>
+            <p>© <%= new Date().getFullYear() %> <%= process.env.COMPANY_NAME %>. All rights reserved.</p>
+            <p>If you have any questions, please contact our support team at <%= process.env.SUPPORT_EMAIL %></p>
+            <p>
+                <small>
+                    You're receiving this email because you recently created an account on <%= process.env.APP_NAME %>.
+                    If this wasn't you, please <a href="<%= process.env.FRONTEND_URL %>/support">contact us</a>.
+                </small>
+            </p>
+        </div>
+    </div>
+</body>
+</html> 

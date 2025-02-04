@@ -1,0 +1,227 @@
+<!-- Navigation -->
+<nav class="nav">
+    <div class="nav-container">
+        <div class="nav-brand">
+            <a href="/" class="nav-logo">
+                <img src="/images/logo.svg" alt="API Platform" />
+                <span>API Platform</span>
+            </a>
+        </div>
+
+        <div class="nav-menu">
+            <% if (user) { %>
+                <a href="/dashboard" class="nav-link <%= path === '/dashboard' ? 'active' : '' %>">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/api-keys" class="nav-link <%= path === '/api-keys' ? 'active' : '' %>">
+                    <i class="fas fa-key"></i>
+                    <span>API Keys</span>
+                </a>
+                <a href="/documentation" class="nav-link <%= path === '/documentation' ? 'active' : '' %>">
+                    <i class="fas fa-book"></i>
+                    <span>Documentation</span>
+                </a>
+                <% if (user.role === 'admin') { %>
+                    <a href="/admin" class="nav-link <%= path.startsWith('/admin') ? 'active' : '' %>">
+                        <i class="fas fa-cog"></i>
+                        <span>Admin</span>
+                    </a>
+                <% } %>
+            <% } else { %>
+                <a href="/documentation" class="nav-link <%= path === '/documentation' ? 'active' : '' %>">
+                    <i class="fas fa-book"></i>
+                    <span>Documentation</span>
+                </a>
+                <a href="/pricing" class="nav-link <%= path === '/pricing' ? 'active' : '' %>">
+                    <i class="fas fa-tag"></i>
+                    <span>Pricing</span>
+                </a>
+            <% } %>
+        </div>
+
+        <div class="nav-actions">
+            <% if (user) { %>
+                <div class="dropdown">
+                    <button class="button dropdown-toggle">
+                        <img src="<%= user.avatar || '/images/default-avatar.png' %>" 
+                             alt="<%= user.name %>" 
+                             class="avatar-small" />
+                        <span><%= user.name %></span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="dropdown-menu">
+                        <a href="/profile" class="dropdown-item">
+                            <i class="fas fa-user"></i>
+                            <span>Profile</span>
+                        </a>
+                        <a href="/settings" class="dropdown-item">
+                            <i class="fas fa-cog"></i>
+                            <span>Settings</span>
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <form action="/auth/logout" method="POST">
+                            <button type="submit" class="dropdown-item text-error">
+                                <i class="fas fa-sign-out-alt"></i>
+                                <span>Logout</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            <% } else { %>
+                <a href="/auth/login" class="button secondary">Login</a>
+                <a href="/auth/register" class="button primary">Register</a>
+            <% } %>
+        </div>
+    </div>
+</nav>
+
+<style>
+.nav {
+    background-color: var(--bg-secondary);
+    box-shadow: var(--shadow-medium);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: var(--z-drawer);
+    padding: var(--spacing-sm) 0;
+}
+
+.nav-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-lg);
+}
+
+.nav-brand {
+    display: flex;
+    align-items: center;
+}
+
+.nav-logo {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: var(--font-size-lg);
+}
+
+.nav-logo img {
+    height: 32px;
+    margin-right: var(--spacing-sm);
+}
+
+.nav-menu {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    text-decoration: none;
+    color: var(--text-secondary);
+    border-radius: var(--radius-medium);
+    transition: all var(--transition-normal);
+}
+
+.nav-link:hover {
+    color: var(--text-primary);
+    background-color: var(--bg-tertiary);
+    box-shadow: var(--shadow-small);
+}
+
+.nav-link.active {
+    color: var(--text-primary);
+    background-color: var(--bg-tertiary);
+    box-shadow: var(--shadow-inset);
+}
+
+.nav-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.avatar-small {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-full);
+    object-fit: cover;
+}
+
+.dropdown {
+    position: relative;
+}
+
+.dropdown-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: var(--spacing-sm);
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius-medium);
+    box-shadow: var(--shadow-large);
+    min-width: 200px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all var(--transition-normal);
+}
+
+.dropdown:hover .dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: all var(--transition-fast);
+}
+
+.dropdown-item:hover {
+    color: var(--text-primary);
+    background-color: var(--bg-tertiary);
+}
+
+.dropdown-divider {
+    height: 1px;
+    background-color: var(--bg-tertiary);
+    margin: var(--spacing-xs) 0;
+}
+
+.text-error {
+    color: var(--error) !important;
+}
+
+@media (max-width: 768px) {
+    .nav-menu {
+        display: none;
+    }
+
+    .nav-brand span {
+        display: none;
+    }
+}
+</style> 

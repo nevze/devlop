@@ -1,0 +1,259 @@
+<%- contentFor('title') %>Create Account
+
+<%- contentFor('body') %>
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <img src="/images/logo.svg" alt="API Platform" class="auth-logo" />
+            <h1>Create Account</h1>
+            <p class="text-secondary">Join thousands of developers using our API platform</p>
+        </div>
+
+        <% if (locals.error) { %>
+            <div class="alert error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span><%= error %></span>
+            </div>
+        <% } %>
+
+        <form action="/auth/register" method="POST" class="auth-form" id="registerForm">
+            <div class="form-group">
+                <label for="name">Full Name</label>
+                <div class="input-group">
+                    <i class="fas fa-user"></i>
+                    <input type="text" 
+                           id="name" 
+                           name="name" 
+                           class="input" 
+                           placeholder="Enter your full name"
+                           required
+                           value="<%= locals.name || '' %>"
+                           minlength="2" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <div class="input-group">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" 
+                           id="email" 
+                           name="email" 
+                           class="input" 
+                           placeholder="Enter your email"
+                           required
+                           value="<%= locals.email || '' %>" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" 
+                           id="password" 
+                           name="password" 
+                           class="input" 
+                           placeholder="Create a password"
+                           required
+                           minlength="8" />
+                    <button type="button" class="toggle-password">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <div class="password-strength">
+                    <div class="strength-meter">
+                        <div class="strength-meter-fill" data-strength="0"></div>
+                    </div>
+                    <div class="password-requirements">
+                        <p class="requirement" data-requirement="length">
+                            <i class="fas fa-circle"></i>
+                            At least 8 characters
+                        </p>
+                        <p class="requirement" data-requirement="uppercase">
+                            <i class="fas fa-circle"></i>
+                            One uppercase letter
+                        </p>
+                        <p class="requirement" data-requirement="lowercase">
+                            <i class="fas fa-circle"></i>
+                            One lowercase letter
+                        </p>
+                        <p class="requirement" data-requirement="number">
+                            <i class="fas fa-circle"></i>
+                            One number
+                        </p>
+                        <p class="requirement" data-requirement="special">
+                            <i class="fas fa-circle"></i>
+                            One special character
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="checkbox-container">
+                    <input type="checkbox" name="terms" required />
+                    <span class="checkmark"></span>
+                    <span>I agree to the <a href="/terms" target="_blank">Terms of Service</a> and <a href="/privacy" target="_blank">Privacy Policy</a></span>
+                </label>
+            </div>
+
+            <button type="submit" class="button primary full-width" id="registerButton" disabled>
+                <i class="fas fa-user-plus"></i>
+                <span>Create Account</span>
+            </button>
+        </form>
+
+        <div class="auth-divider">
+            <span>or continue with</span>
+        </div>
+
+        <div class="social-buttons">
+            <button class="button secondary social-button" onclick="window.location.href='/auth/google'">
+                <img src="/images/google.svg" alt="Google" />
+                <span>Google</span>
+            </button>
+            <button class="button secondary social-button" onclick="window.location.href='/auth/github'">
+                <i class="fab fa-github"></i>
+                <span>GitHub</span>
+            </button>
+        </div>
+
+        <p class="auth-footer">
+            Already have an account? 
+            <a href="/auth/login">Log In</a>
+        </p>
+    </div>
+</div>
+
+<style>
+/* Inherit auth container styles from login page */
+
+/* Password Strength Meter */
+.password-strength {
+    margin-top: var(--spacing-sm);
+}
+
+.strength-meter {
+    height: 4px;
+    background-color: var(--bg-tertiary);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    margin-bottom: var(--spacing-sm);
+}
+
+.strength-meter-fill {
+    height: 100%;
+    width: 0;
+    background-color: var(--error);
+    transition: all var(--transition-normal);
+}
+
+.strength-meter-fill[data-strength="1"] { width: 20%; background-color: var(--error); }
+.strength-meter-fill[data-strength="2"] { width: 40%; background-color: var(--warning); }
+.strength-meter-fill[data-strength="3"] { width: 60%; background-color: var(--warning); }
+.strength-meter-fill[data-strength="4"] { width: 80%; background-color: var(--info); }
+.strength-meter-fill[data-strength="5"] { width: 100%; background-color: var(--success); }
+
+.password-requirements {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-xs);
+}
+
+.requirement {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.requirement i {
+    font-size: 8px;
+    transition: all var(--transition-fast);
+}
+
+.requirement.valid {
+    color: var(--success);
+}
+
+.requirement.valid i {
+    color: var(--success);
+}
+
+/* Terms Links */
+.checkbox-container a {
+    color: var(--accent-primary);
+    text-decoration: none;
+}
+
+.checkbox-container a:hover {
+    text-decoration: underline;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('registerForm');
+    const passwordInput = document.getElementById('password');
+    const registerButton = document.getElementById('registerButton');
+    const togglePassword = document.querySelector('.toggle-password');
+    const strengthMeter = document.querySelector('.strength-meter-fill');
+    const requirements = document.querySelectorAll('.requirement');
+    
+    // Password visibility toggle
+    togglePassword.addEventListener('click', () => {
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+        togglePassword.querySelector('i').classList.toggle('fa-eye');
+        togglePassword.querySelector('i').classList.toggle('fa-eye-slash');
+    });
+    
+    // Password strength checker
+    const validatePassword = (password) => {
+        const checks = {
+            length: password.length >= 8,
+            uppercase: /[A-Z]/.test(password),
+            lowercase: /[a-z]/.test(password),
+            number: /[0-9]/.test(password),
+            special: /[^A-Za-z0-9]/.test(password)
+        };
+        
+        // Update requirement indicators
+        requirements.forEach(req => {
+            const requirement = req.dataset.requirement;
+            if (checks[requirement]) {
+                req.classList.add('valid');
+            } else {
+                req.classList.remove('valid');
+            }
+        });
+        
+        // Calculate strength
+        const strength = Object.values(checks).filter(Boolean).length;
+        strengthMeter.setAttribute('data-strength', strength);
+        
+        // Enable/disable register button
+        registerButton.disabled = strength < 4;
+        
+        return strength;
+    };
+    
+    // Password input handler
+    passwordInput.addEventListener('input', (e) => {
+        validatePassword(e.target.value);
+    });
+    
+    // Form submission handler
+    form.addEventListener('submit', (e) => {
+        const password = passwordInput.value;
+        const strength = validatePassword(password);
+        
+        if (strength < 4) {
+            e.preventDefault();
+            showToast('Please create a stronger password', 'error');
+        }
+    });
+});
+</script> 

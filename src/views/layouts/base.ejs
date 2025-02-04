@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> | API Platform</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/images/favicon.png">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Base Styles -->
+    <link rel="stylesheet" href="/styles/theme.css">
+    
+    <!-- Page-specific styles -->
+    <%- style %>
+</head>
+<body>
+    <!-- Navigation -->
+    <%- include('../components/navigation') %>
+    
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Sidebar (if present) -->
+        <% if (locals.sidebar) { %>
+            <aside class="sidebar">
+                <%- include(`../components/${sidebar}`) %>
+            </aside>
+        <% } %>
+        
+        <!-- Content Area -->
+        <div class="content <%= locals.sidebar ? 'with-sidebar' : '' %>">
+            <!-- Page Header -->
+            <% if (locals.header) { %>
+                <header class="page-header">
+                    <div class="page-header-content">
+                        <h1><%= header.title %></h1>
+                        <% if (header.description) { %>
+                            <p class="text-secondary"><%= header.description %></p>
+                        <% } %>
+                    </div>
+                    
+                    <% if (header.actions) { %>
+                        <div class="page-header-actions">
+                            <%- header.actions %>
+                        </div>
+                    <% } %>
+                </header>
+            <% } %>
+            
+            <!-- Page Content -->
+            <%- body %>
+        </div>
+    </main>
+    
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+    
+    <!-- Modal Container -->
+    <div id="modal-container"></div>
+    
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.24.0/axios.min.js"></script>
+    <script src="/js/main.js"></script>
+    <%- script %>
+</body>
+</html>
+
+<style>
+.main {
+    display: flex;
+    min-height: 100vh;
+    padding-top: 64px; /* Height of navigation */
+}
+
+.sidebar {
+    width: 280px;
+    background-color: var(--bg-secondary);
+    box-shadow: var(--shadow-medium);
+    position: fixed;
+    top: 64px;
+    left: 0;
+    bottom: 0;
+    overflow-y: auto;
+    z-index: var(--z-drawer);
+}
+
+.content {
+    flex: 1;
+    padding: var(--spacing-lg);
+    margin-left: 0;
+    transition: margin-left var(--transition-normal);
+}
+
+.content.with-sidebar {
+    margin-left: 280px;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-xl);
+    padding-bottom: var(--spacing-lg);
+    border-bottom: 1px solid var(--bg-tertiary);
+}
+
+.page-header-content h1 {
+    margin-bottom: var(--spacing-xs);
+}
+
+.page-header-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+#toast-container {
+    position: fixed;
+    bottom: var(--spacing-lg);
+    right: var(--spacing-lg);
+    z-index: var(--z-toast);
+}
+
+.toast {
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius-medium);
+    box-shadow: var(--shadow-large);
+    padding: var(--spacing-md) var(--spacing-lg);
+    margin-top: var(--spacing-sm);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    animation: slideIn var(--transition-normal);
+}
+
+.toast.success { border-left: 4px solid var(--success); }
+.toast.error { border-left: 4px solid var(--error); }
+.toast.warning { border-left: 4px solid var(--warning); }
+.toast.info { border-left: 4px solid var(--info); }
+
+#modal-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: var(--z-modal);
+}
+
+.modal {
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius-large);
+    box-shadow: var(--shadow-large);
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: fadeIn var(--transition-normal);
+}
+
+.modal-header {
+    padding: var(--spacing-lg);
+    border-bottom: 1px solid var(--bg-tertiary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-body {
+    padding: var(--spacing-lg);
+}
+
+.modal-footer {
+    padding: var(--spacing-lg);
+    border-top: 1px solid var(--bg-tertiary);
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-sm);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform var(--transition-normal);
+    }
+    
+    .sidebar.active {
+        transform: translateX(0);
+    }
+    
+    .content.with-sidebar {
+        margin-left: 0;
+    }
+}
+</style>
+
+<script>
+// Toast functionality
+window.showToast = function(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 
+                          type === 'error' ? 'times-circle' : 
+                          type === 'warning' ? 'exclamation-triangle' : 
+                          'info-circle'}"></i>
+        <span>${message}</span>
+    `;
+    
+    document.getElementById('toast-container').appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+};
+
+// Modal functionality
+window.showModal = function(title, content, actions) {
+    const modalContainer = document.getElementById('modal-container');
+    modalContainer.style.display = 'flex';
+    
+    modalContainer.innerHTML = `
+        <div class="modal">
+            <div class="modal-header">
+                <h3>${title}</h3>
+                <button class="button secondary" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                ${content}
+            </div>
+            <div class="modal-footer">
+                ${actions}
+            </div>
+        </div>
+    `;
+};
+
+window.closeModal = function() {
+    const modalContainer = document.getElementById('modal-container');
+    modalContainer.style.display = 'none';
+};
+
+// Close modal when clicking outside
+document.getElementById('modal-container').addEventListener('click', (e) => {
+    if (e.target.id === 'modal-container') {
+        closeModal();
+    }
+});
+
+// Mobile sidebar toggle
+document.addEventListener('DOMContentLoaded', () => {
+    const toggleButton = document.querySelector('.sidebar-toggle');
+    const sidebar = document.querySelector('.sidebar');
+    
+    if (toggleButton && sidebar) {
+        toggleButton.addEventListener('click', () => {
+            sidebar.classList.toggle('active');
+        });
+    }
+});
+</script> 
