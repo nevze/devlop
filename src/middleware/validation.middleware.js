@@ -1,15 +1,12 @@
 const { validationResult } = require('express-validator');
 const { AppError } = require('./error.middleware');
 
+// Middleware to validate request using express-validator
 const validateRequest = (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        const errorMessages = errors.array().map(err => ({
-            field: err.param,
-            message: err.msg
-        }));
-        
-        throw new AppError('Validation failed', 400, errorMessages);
+        const errorMessages = errors.array().map(err => err.msg);
+        throw new AppError(errorMessages[0], 400);
     }
     next();
 };

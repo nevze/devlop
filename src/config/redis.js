@@ -1,65 +1,101 @@
 const Redis = require('redis');
 const logger = require('./logger');
 
-let redisClient;
+// Create Redis client
+const client = Redis.createClient({
+    url: process.env.REDIS_URL || 'redis://localhost:6379',
+    password: process.env.REDIS_PASSWORD
+});
 
-const initializeRedis = async () => {
-    try {
-        redisClient = Redis.createClient({
-            url: process.env.REDIS_URL || 'redis://localhost:6379',
-            socket: {
-                reconnectStrategy: (retries) => {
-                    if (retries > 10) {
-                        logger.error('Redis max retries reached. Giving up.');
-                        return new Error('Redis max retries reached');
-                    }
-                    return Math.min(retries * 100, 3000);
-                }
+// Handle Redis connection events
+client.on('connect', () => {
+    logger.info('Redis client connected');
+});
+
+client.on('error', (err) => {
+    logger.error('Redis client error:', err);
+});
+
+client.on('reconnecting', () => {
+    logger.info('Redis client reconnecting');
+});
+
+// Connect to Redis
+client.connect().catch((err) => {
+    logger.error('Redis connection error:', err);
+});
+
+// Cache wrapper with Redis
+const cache = {
+    async get(key, fetchData, ttl = 3600) {
+        try {
+            // Try to get data from cache
+            const cachedData = await client.get(key);
+            if (cachedData) {
+                return JSON.parse(cachedData);
             }
-        });
 
-        redisClient.on('error', (err) => {
-            logger.error(`Redis Error: ${err}`);
-        });
+            // If not in cache, fetch data
+            const data = await fetchData();
+            
+            // Store in cache
+            if (data) {
+                await client.setEx(key, ttl, JSON.stringify(data));
+            }
 
-        redisClient.on('connect', () => {
-            logger.info('Redis connected');
-        });
+            return data;
+        } catch (error) {
+            logger.error(`Cache error for key ${key}:`, error);
+            // If cache fails, just fetch the data
+            return await fetchData();
+        }
+    },
 
-        redisClient.on('reconnecting', () => {
-            logger.warn('Redis reconnecting');
-        });
+    async set(key, data, ttl = 3600) {
+        try {
+            await client.setEx(key, ttl, JSON.stringify(data));
+        } catch (error) {
+            logger.error(`Cache set error for key ${key}:`, error);
+        }
+    },
 
-        await redisClient.connect();
-    } catch (error) {
-        logger.error(`Redis initialization error: ${error}`);
-        process.exit(1);
+    async del(key) {
+        try {
+            await client.del(key);
+        } catch (error) {
+            logger.error(`Cache delete error for key ${key}:`, error);
+        }
+    },
+
+    async delPattern(pattern) {
+        try {
+            const keys = await client.keys(pattern);
+            if (keys.length > 0) {
+                await client.del(keys);
+            }
+        } catch (error) {
+            logger.error(`Cache delete pattern error for ${pattern}:`, error);
+        }
     }
 };
 
-// Cache middleware
-const cache = async (key, callback, expireTime = 3600) => {
+// Initialize Redis
+const initializeRedis = async () => {
     try {
-        const cachedData = await redisClient.get(key);
-        if (cachedData) {
-            return JSON.parse(cachedData);
-        }
-
-        const freshData = await callback();
-        await redisClient.setEx(key, expireTime, JSON.stringify(freshData));
-        return freshData;
+        await client.connect();
+        logger.info('Redis initialized successfully');
     } catch (error) {
-        logger.error(`Cache error: ${error}`);
-        return callback();
+        logger.error('Redis initialization error:', error);
+        process.exit(1);
     }
 };
 
 // Rate limiting functions
 const incrementRequestCount = async (key) => {
     try {
-        const count = await redisClient.incr(key);
+        const count = await client.incr(key);
         if (count === 1) {
-            await redisClient.expire(key, 60); // 60 seconds window
+            await client.expire(key, 60); // 60 seconds window
         }
         return count;
     } catch (error) {
@@ -70,7 +106,7 @@ const incrementRequestCount = async (key) => {
 
 process.on('SIGINT', async () => {
     try {
-        await redisClient.quit();
+        await client.quit();
         logger.info('Redis connection closed through app termination');
     } catch (err) {
         logger.error(`Error closing Redis connection: ${err}`);
@@ -78,8 +114,8 @@ process.on('SIGINT', async () => {
 });
 
 module.exports = {
-    initializeRedis,
+    client,
     cache,
-    incrementRequestCount,
-    getRedisClient: () => redisClient
+    initializeRedis,
+    incrementRequestCount
 }; 

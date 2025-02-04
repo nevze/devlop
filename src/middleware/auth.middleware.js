@@ -1,14 +1,17 @@
 const jwt = require('jsonwebtoken');
+const { rateLimit } = require('express-rate-limit');
 const { verifyFirebaseToken } = require('../config/firebase');
 const { User } = require('../models/user.model');
+const { AppError } = require('./error.middleware');
 const logger = require('../config/logger');
 const { cache } = require('../config/redis');
 
+// Authentication middleware
 const authMiddleware = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader) {
-            return res.status(401).json({ message: 'No authorization header' });
+            throw new AppError('No authorization header', 401);
         }
 
         const [authType, token] = authHeader.split(' ');
@@ -18,16 +21,16 @@ const authMiddleware = async (req, res, next) => {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             
             // Get user from cache or database
-            const user = await cache(`user:${decoded.userId}`, async () => {
+            const user = await cache.get(`user:${decoded.userId}`, async () => {
                 return await User.findById(decoded.userId);
             }, 3600); // Cache for 1 hour
 
             if (!user) {
-                return res.status(401).json({ message: 'User not found' });
+                throw new AppError('User not found', 401);
             }
 
             req.user = user;
-            return next();
+            next();
         } else if (authType === 'Firebase') {
             // Firebase token authentication
             const decodedToken = await verifyFirebaseToken(token);
@@ -45,13 +48,13 @@ const authMiddleware = async (req, res, next) => {
             }
 
             req.user = user;
-            return next();
+            next();
         } else {
-            return res.status(401).json({ message: 'Invalid authorization type' });
+            throw new AppError('Invalid authorization type', 401);
         }
     } catch (error) {
         logger.error(`Authentication error: ${error}`);
-        return res.status(401).json({ message: 'Authentication failed' });
+        throw new AppError('Authentication failed', 401);
     }
 };
 
@@ -59,36 +62,45 @@ const authMiddleware = async (req, res, next) => {
 const authorize = (...roles) => {
     return (req, res, next) => {
         if (!req.user) {
-            return res.status(401).json({ message: 'User not authenticated' });
+            throw new AppError('User not authenticated', 401);
         }
 
         if (!roles.includes(req.user.role)) {
-            return res.status(403).json({ message: 'Unauthorized access' });
+            throw new AppError('Unauthorized access', 403);
         }
 
         next();
     };
 };
 
+// Rate limiter for auth routes
+const authRateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // limit each IP to 5 requests per windowMs
+    message: 'Too many attempts from this IP, please try again after 15 minutes',
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
 // API key authentication middleware
 const apiKeyAuth = async (req, res, next) => {
     try {
         const apiKey = req.headers['x-api-key'];
         if (!apiKey) {
-            return res.status(401).json({ message: 'API key is required' });
+            throw new AppError('API key is required', 401);
         }
 
-        const user = await cache(`apikey:${apiKey}`, async () => {
+        const user = await cache.get(`apikey:${apiKey}`, async () => {
             return await User.findOne({ 'apiKeys.key': apiKey });
         }, 3600); // Cache for 1 hour
 
         if (!user) {
-            return res.status(401).json({ message: 'Invalid API key' });
+            throw new AppError('Invalid API key', 401);
         }
 
         const userApiKey = user.apiKeys.find(k => k.key === apiKey);
         if (userApiKey.expiresAt && userApiKey.expiresAt < new Date()) {
-            return res.status(401).json({ message: 'API key has expired' });
+            throw new AppError('API key has expired', 401);
         }
 
         req.user = user;
@@ -96,12 +108,13 @@ const apiKeyAuth = async (req, res, next) => {
         next();
     } catch (error) {
         logger.error(`API key authentication error: ${error}`);
-        return res.status(401).json({ message: 'Authentication failed' });
+        throw new AppError('Authentication failed', 401);
     }
 };
 
 module.exports = {
     authMiddleware,
     authorize,
+    authRateLimiter,
     apiKeyAuth
 }; 

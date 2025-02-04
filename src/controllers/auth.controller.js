@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 const { User } = require('../models/user.model');
 const { AppError } = require('../middleware/error.middleware');
 const { verifyFirebaseToken } = require('../config/firebase');
@@ -271,6 +272,32 @@ const resendVerificationEmail = async (req, res) => {
     }
 };
 
+// Change password
+const changePassword = async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+
+    const user = await User.findById(req.user._id).select('+password');
+
+    if (!(await user.correctPassword(currentPassword, user.password))) {
+        throw new AppError('Current password is incorrect', 401);
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    // Generate new tokens
+    const token = user.generateJWT();
+    const refreshToken = user.generateRefreshToken();
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            token,
+            refreshToken
+        }
+    });
+};
+
 // Google authentication
 const googleAuth = async (req, res) => {
     const { idToken } = req.body;
@@ -315,31 +342,6 @@ const googleAuth = async (req, res) => {
     } catch (error) {
         throw new AppError('Google authentication failed', 401);
     }
-};
-
-// Change password
-const changePassword = async (req, res) => {
-    const { currentPassword, newPassword } = req.body;
-
-    const user = await User.findById(req.user._id).select('+password');
-
-    if (!(await user.correctPassword(currentPassword, user.password))) {
-        throw new AppError('Current password is incorrect', 401);
-    }
-
-    user.password = newPassword;
-    await user.save();
-
-    const token = user.generateJWT();
-    const refreshToken = user.generateRefreshToken();
-
-    res.status(200).json({
-        status: 'success',
-        data: {
-            token,
-            refreshToken
-        }
-    });
 };
 
 module.exports = {

@@ -1,69 +1,49 @@
 const nodemailer = require('nodemailer');
-const ejs = require('ejs');
 const path = require('path');
+const ejs = require('ejs');
 const logger = require('../config/logger');
 
-// Create reusable transporter
-const createTransporter = () => {
-    if (process.env.NODE_ENV === 'production') {
-        // Production transporter (e.g., SendGrid, AWS SES)
-        return nodemailer.createTransport({
-            service: process.env.EMAIL_SERVICE,
-            auth: {
-                user: process.env.EMAIL_USERNAME,
-                pass: process.env.EMAIL_PASSWORD
-            }
-        });
-    } else {
-        // Development transporter (ethereal.email)
-        return nodemailer.createTransport({
-            host: 'smtp.ethereal.email',
-            port: 587,
-            secure: false,
-            auth: {
-                user: process.env.DEV_EMAIL_USERNAME,
-                pass: process.env.DEV_EMAIL_PASSWORD
-            }
-        });
+// Create transporter
+const transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST,
+    port: process.env.EMAIL_PORT,
+    secure: process.env.EMAIL_SECURE === 'true',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD
     }
-};
+});
 
-// Load email template
-const loadTemplate = async (templateName, context) => {
-    const templatePath = path.join(__dirname, '../views/emails', `${templateName}.ejs`);
+// Verify transporter connection
+transporter.verify()
+    .then(() => logger.info('Email service ready'))
+    .catch(err => logger.error('Email service error:', err));
+
+// Send email function
+const sendEmail = async ({ to, subject, template, context }) => {
     try {
-        const template = await ejs.renderFile(templatePath, context);
-        return template;
-    } catch (error) {
-        logger.error(`Error loading email template: ${error}`);
-        throw error;
-    }
-};
+        // Get template path
+        const templatePath = path.join(__dirname, '../views/emails', `${template}.ejs`);
 
-// Send email
-const sendEmail = async ({ to, subject, template, context, attachments = [] }) => {
-    try {
-        const transporter = createTransporter();
-        const html = await loadTemplate(template, context);
+        // Render email template
+        const html = await ejs.renderFile(templatePath, {
+            ...context,
+            frontendUrl: process.env.FRONTEND_URL,
+            year: new Date().getFullYear()
+        });
 
-        const mailOptions = {
+        // Send email
+        const info = await transporter.sendMail({
             from: `${process.env.EMAIL_FROM_NAME} <${process.env.EMAIL_FROM_ADDRESS}>`,
             to,
             subject,
-            html,
-            attachments
-        };
+            html
+        });
 
-        const info = await transporter.sendMail(mailOptions);
-        logger.info(`Email sent: ${info.messageId}`);
-
-        if (process.env.NODE_ENV !== 'production') {
-            logger.info(`Preview URL: ${nodemailer.getTestMessageUrl(info)}`);
-        }
-
+        logger.info('Email sent:', info.messageId);
         return info;
     } catch (error) {
-        logger.error(`Error sending email: ${error}`);
+        logger.error('Email sending error:', error);
         throw error;
     }
 };
@@ -71,8 +51,20 @@ const sendEmail = async ({ to, subject, template, context, attachments = [] }) =
 // Send bulk emails
 const sendBulkEmails = async ({ to, subject, template, context, attachments = [] }) => {
     try {
-        const transporter = createTransporter();
-        const html = await loadTemplate(template, context);
+        const transporter = nodemailer.createTransport({
+            host: process.env.EMAIL_HOST,
+            port: process.env.EMAIL_PORT,
+            secure: process.env.EMAIL_SECURE === 'true',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASSWORD
+            }
+        });
+        const html = await ejs.renderFile(path.join(__dirname, '../views/emails', `${template}.ejs`), {
+            ...context,
+            frontendUrl: process.env.FRONTEND_URL,
+            year: new Date().getFullYear()
+        });
 
         const mailPromises = to.map(recipient => {
             const mailOptions = {

@@ -1,39 +1,44 @@
 const admin = require('firebase-admin');
 const logger = require('./logger');
 
-let firebaseAdmin;
+let firebaseApp;
 
 const initializeFirebase = () => {
     try {
-        if (!process.env.FIREBASE_CREDENTIALS) {
-            logger.warn('Firebase credentials not found. Google authentication will not be available.');
+        // Check if Firebase credentials are provided
+        if (!process.env.FIREBASE_PROJECT_ID || 
+            !process.env.FIREBASE_PRIVATE_KEY || 
+            !process.env.FIREBASE_CLIENT_EMAIL) {
+            logger.warn('Firebase credentials not provided, skipping initialization');
             return;
         }
 
-        const credentials = JSON.parse(process.env.FIREBASE_CREDENTIALS);
-
-        firebaseAdmin = admin.initializeApp({
-            credential: admin.credential.cert(credentials),
-            databaseURL: process.env.FIREBASE_DATABASE_URL
+        // Initialize Firebase Admin
+        firebaseApp = admin.initializeApp({
+            credential: admin.credential.cert({
+                projectId: process.env.FIREBASE_PROJECT_ID,
+                privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+                clientEmail: process.env.FIREBASE_CLIENT_EMAIL
+            })
         });
 
-        logger.info('Firebase Admin SDK initialized successfully');
+        logger.info('Firebase initialized successfully');
     } catch (error) {
-        logger.error(`Firebase initialization error: ${error}`);
+        logger.error('Firebase initialization error:', error);
         process.exit(1);
     }
 };
 
-// Verify Firebase ID token
 const verifyFirebaseToken = async (idToken) => {
+    if (!firebaseApp) {
+        throw new Error('Firebase not initialized');
+    }
+
     try {
-        if (!firebaseAdmin) {
-            throw new Error('Firebase Admin SDK not initialized');
-        }
-        const decodedToken = await firebaseAdmin.auth().verifyIdToken(idToken);
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
         return decodedToken;
     } catch (error) {
-        logger.error(`Firebase token verification error: ${error}`);
+        logger.error('Firebase token verification error:', error);
         throw error;
     }
 };
@@ -41,10 +46,10 @@ const verifyFirebaseToken = async (idToken) => {
 // Get user by email
 const getUserByEmail = async (email) => {
     try {
-        if (!firebaseAdmin) {
-            throw new Error('Firebase Admin SDK not initialized');
+        if (!firebaseApp) {
+            throw new Error('Firebase not initialized');
         }
-        const userRecord = await firebaseAdmin.auth().getUserByEmail(email);
+        const userRecord = await admin.auth().getUserByEmail(email);
         return userRecord;
     } catch (error) {
         logger.error(`Firebase get user error: ${error}`);
@@ -55,10 +60,10 @@ const getUserByEmail = async (email) => {
 // Create custom token
 const createCustomToken = async (uid, additionalClaims) => {
     try {
-        if (!firebaseAdmin) {
-            throw new Error('Firebase Admin SDK not initialized');
+        if (!firebaseApp) {
+            throw new Error('Firebase not initialized');
         }
-        const token = await firebaseAdmin.auth().createCustomToken(uid, additionalClaims);
+        const token = await admin.auth().createCustomToken(uid, additionalClaims);
         return token;
     } catch (error) {
         logger.error(`Firebase custom token creation error: ${error}`);
@@ -71,5 +76,5 @@ module.exports = {
     verifyFirebaseToken,
     getUserByEmail,
     createCustomToken,
-    getFirebaseAdmin: () => firebaseAdmin
+    getFirebaseApp: () => firebaseApp
 }; 
