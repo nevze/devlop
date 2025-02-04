@@ -1,29 +1,31 @@
 const Redis = require('redis');
 const logger = require('./logger');
 
+let client;
+
 // Create Redis client
-const client = Redis.createClient({
-    url: process.env.REDIS_URL || 'redis://localhost:6379',
-    password: process.env.REDIS_PASSWORD
-});
+const createClient = () => {
+    if (!client) {
+        client = Redis.createClient({
+            url: process.env.REDIS_URL || 'redis://localhost:6379',
+            password: process.env.REDIS_PASSWORD
+        });
 
-// Handle Redis connection events
-client.on('connect', () => {
-    logger.info('Redis client connected');
-});
+        // Handle Redis connection events
+        client.on('connect', () => {
+            logger.info('Redis client connected');
+        });
 
-client.on('error', (err) => {
-    logger.error('Redis client error:', err);
-});
+        client.on('error', (err) => {
+            logger.error('Redis client error:', err);
+        });
 
-client.on('reconnecting', () => {
-    logger.info('Redis client reconnecting');
-});
-
-// Connect to Redis
-client.connect().catch((err) => {
-    logger.error('Redis connection error:', err);
-});
+        client.on('reconnecting', () => {
+            logger.info('Redis client reconnecting');
+        });
+    }
+    return client;
+};
 
 // Cache wrapper with Redis
 const cache = {
@@ -82,11 +84,16 @@ const cache = {
 // Initialize Redis
 const initializeRedis = async () => {
     try {
-        await client.connect();
+        if (!client) {
+            client = createClient();
+        }
+        if (!client.isOpen) {
+            await client.connect();
+        }
         logger.info('Redis initialized successfully');
     } catch (error) {
         logger.error('Redis initialization error:', error);
-        process.exit(1);
+        // Don't exit process, allow app to run without Redis
     }
 };
 
@@ -104,10 +111,13 @@ const incrementRequestCount = async (key) => {
     }
 };
 
+// Cleanup on app termination
 process.on('SIGINT', async () => {
     try {
-        await client.quit();
-        logger.info('Redis connection closed through app termination');
+        if (client && client.isOpen) {
+            await client.quit();
+            logger.info('Redis connection closed through app termination');
+        }
     } catch (err) {
         logger.error(`Error closing Redis connection: ${err}`);
     }
