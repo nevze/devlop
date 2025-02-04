@@ -77,6 +77,14 @@ app.get('/', (req, res) => {
     res.render('pages/landing');
 });
 
+app.get('/auth/login', (req, res) => {
+    res.render('pages/login');
+});
+
+app.get('/auth/register', (req, res) => {
+    res.render('pages/register');
+});
+
 app.get('/dashboard', authMiddleware, (req, res) => {
     res.render('pages/dashboard');
 });
