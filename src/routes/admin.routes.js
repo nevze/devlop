@@ -18,6 +18,8 @@ const {
     getRevenue,
     exportData
 } = require('../controllers/admin.controller');
+const { User } = require('../models/user.model');
+const stripe = require('../config/stripe');
 
 const router = express.Router();
 
@@ -189,5 +191,54 @@ router.post(
     validateRequest,
     exportData
 );
+
+// Get system statistics
+router.get('/stats', async (req, res) => {
+    const totalUsers = await User.countDocuments();
+    const activeUsers = await User.countDocuments({ active: true });
+    const premiumUsers = await User.countDocuments({
+        tier: { $in: ['BASIC', 'PRO', 'ENTERPRISE'] }
+    });
+    
+    res.status(200).json({
+        status: 'success',
+        data: {
+            stats: {
+                totalUsers,
+                activeUsers,
+                premiumUsers
+            }
+        }
+    });
+});
+
+// Get revenue statistics
+router.get('/revenue', async (req, res) => {
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - 1);
+    
+    const revenue = await stripe.stripe.charges.list({
+        created: { gte: Math.floor(startDate.getTime() / 1000) },
+        limit: 100
+    });
+    
+    const totalRevenue = revenue.data.reduce((sum, charge) => {
+        return sum + charge.amount;
+    }, 0) / 100; // Convert from cents to dollars
+    
+    res.status(200).json({
+        status: 'success',
+        data: {
+            revenue: {
+                total: totalRevenue,
+                currency: 'USD',
+                period: {
+                    start: startDate,
+                    end: new Date()
+                }
+            }
+        }
+    });
+});
 
 module.exports = router; 

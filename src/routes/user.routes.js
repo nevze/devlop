@@ -27,56 +27,136 @@ router.get(
     getCurrentUser
 );
 
-// Update profile
-router.put(
-    '/me',
-    [
-        body('name').optional().trim().notEmpty().withMessage('Name cannot be empty'),
-        body('email')
-            .optional()
-            .isEmail()
-            .normalizeEmail()
-            .withMessage('Please provide a valid email'),
-        body('company').optional().trim(),
-        body('website')
-            .optional()
-            .isURL()
-            .withMessage('Please provide a valid URL'),
-        body('timezone').optional().trim(),
-        body('bio').optional().trim()
-    ],
-    validateRequest,
-    updateProfile
-);
+// Get user profile
+router.get('/profile', (req, res) => {
+    res.status(200).json({
+        status: 'success',
+        data: {
+            user: {
+                id: req.user._id,
+                name: req.user.name,
+                email: req.user.email,
+                role: req.user.role,
+                tier: req.user.tier,
+                isEmailVerified: req.user.isEmailVerified,
+                company: req.user.company,
+                website: req.user.website,
+                timezone: req.user.timezone,
+                bio: req.user.bio,
+                avatar: req.user.avatar,
+                notificationSettings: req.user.notificationSettings
+            }
+        }
+    });
+});
 
-// API key management
-router.post(
-    '/api-keys',
-    [
-        body('name').trim().notEmpty().withMessage('API key name is required'),
-        body('expiresIn')
-            .optional()
-            .isInt({ min: 0 })
-            .withMessage('Expiration must be a positive number'),
-        body('permissions')
-            .optional()
-            .isArray()
-            .withMessage('Permissions must be an array')
-    ],
-    validateRequest,
-    generateApiKey
-);
+// Update user profile
+router.patch('/profile', [
+    body('name').optional().trim().notEmpty().withMessage('Name cannot be empty'),
+    body('company').optional().trim(),
+    body('website').optional().trim().isURL().withMessage('Please provide a valid URL'),
+    body('timezone').optional().trim(),
+    body('bio').optional().trim().isLength({ max: 500 }).withMessage('Bio must be less than 500 characters'),
+    validateRequest
+], async (req, res) => {
+    const allowedFields = ['name', 'company', 'website', 'timezone', 'bio'];
+    const updates = {};
+    
+    Object.keys(req.body).forEach(key => {
+        if (allowedFields.includes(key)) {
+            updates[key] = req.body[key];
+        }
+    });
+    
+    Object.assign(req.user, updates);
+    await req.user.save();
+    
+    res.status(200).json({
+        status: 'success',
+        message: 'Profile updated successfully',
+        data: { user: req.user }
+    });
+});
 
-router.get('/api-keys', listApiKeys);
+// Update notification settings
+router.patch('/notifications', [
+    body('email').optional().isBoolean(),
+    body('push').optional().isBoolean(),
+    body('usageAlerts').optional().isBoolean(),
+    body('newsletterSubscription').optional().isBoolean(),
+    body('marketingEmails').optional().isBoolean(),
+    validateRequest
+], async (req, res) => {
+    const allowedSettings = ['email', 'push', 'usageAlerts', 'newsletterSubscription', 'marketingEmails'];
+    const updates = {};
+    
+    Object.keys(req.body).forEach(key => {
+        if (allowedSettings.includes(key)) {
+            updates[`notificationSettings.${key}`] = req.body[key];
+        }
+    });
+    
+    Object.assign(req.user.notificationSettings, updates);
+    await req.user.save();
+    
+    res.status(200).json({
+        status: 'success',
+        message: 'Notification settings updated successfully',
+        data: { notificationSettings: req.user.notificationSettings }
+    });
+});
 
-router.delete(
-    '/api-keys/:keyId',
-    [
-        body('keyId').notEmpty().withMessage('API key ID is required')
-    ],
-    validateRequest,
-    revokeApiKey
-);
+// Generate API key
+router.post('/api-keys', [
+    body('name').trim().notEmpty().withMessage('API key name is required'),
+    body('permissions').optional().isArray(),
+    body('expiresIn').optional().isNumeric(),
+    validateRequest
+], async (req, res) => {
+    const apiKey = req.user.generateApiKey(
+        req.body.name,
+        req.body.permissions,
+        req.body.expiresIn
+    );
+    
+    await req.user.save();
+    
+    res.status(201).json({
+        status: 'success',
+        message: 'API key generated successfully',
+        data: { apiKey }
+    });
+});
+
+// List API keys
+router.get('/api-keys', (req, res) => {
+    const apiKeys = req.user.apiKeys.map(key => ({
+        name: key.name,
+        createdAt: key.createdAt,
+        lastUsed: key.lastUsed,
+        expiresAt: key.expiresAt,
+        permissions: key.permissions
+    }));
+    
+    res.status(200).json({
+        status: 'success',
+        data: { apiKeys }
+    });
+});
+
+// Delete API key
+router.delete('/api-keys/:keyId', async (req, res) => {
+    req.user.apiKeys = req.user.apiKeys.filter(
+        key => key._id.toString() !== req.params.keyId
+    );
+    
+    await req.user.save();
+    
+    res.status(200).json({
+        status: 'success',
+        message: 'API key deleted successfully'
+    });
+});
 
 // Usage statistics
 router.get(
@@ -101,28 +181,30 @@ router.put(
 );
 
 // Delete account
-router.delete(
-    '/me',
-    [
-        body('password').notEmpty().withMessage('Password is required for account deletion')
-    ],
-    validateRequest,
-    deleteAccount
-);
-
-// Notification settings
-router.put(
-    '/notifications',
-    [
-        body('email').optional().isBoolean(),
-        body('push').optional().isBoolean(),
-        body('usageAlerts').optional().isBoolean(),
-        body('newsletterSubscription').optional().isBoolean(),
-        body('marketingEmails').optional().isBoolean()
-    ],
-    validateRequest,
-    updateNotificationSettings
-);
+router.delete('/account', [
+    body('password').notEmpty().withMessage('Password is required'),
+    validateRequest
+], async (req, res) => {
+    const { password } = req.body;
+    
+    // Verify password
+    const isValid = await req.user.correctPassword(password, req.user.password);
+    if (!isValid) {
+        return res.status(401).json({
+            status: 'error',
+            message: 'Incorrect password'
+        });
+    }
+    
+    // Deactivate account
+    req.user.active = false;
+    await req.user.save();
+    
+    res.status(200).json({
+        status: 'success',
+        message: 'Account deleted successfully'
+    });
+});
 
 // Activity log
 router.get(
